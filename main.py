@@ -10,7 +10,7 @@ from config import *
 bot = Bot(ACCESS_TOKEN)
 
 import io
-import PIL
+from PIL import Image # $ pip install pillow
 import face_recognition_models
 import dlib
 import numpy as np
@@ -139,12 +139,11 @@ def receive_message():
                         bot.send_text_message(recipient_id, message)
                     if x['message'].get('attachments'):
                         for att in x['message'].get('attachments'):
-                            if att['type'] == "image":
+                            if att['type'] == "image" or True:
                                 temp = io.BytesIO()
                                 out_file = io.BytesIO()
-                                urllib.request.urlretrieve(att['payload']['url'],
-                                                           temp)
-                                image = cv2.imread(temp, 1)
+                                im = Image.open(urllib.request.urlopen(att['payload']['url']))
+                                image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
                                 # image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)
                                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -192,9 +191,8 @@ def receive_message():
                                     # and draw them on the image
                                     for (x, y) in shape:
                                         cv2.circle(image, (x, y), 1, (0, 0, 255), -1)
-                                ret, buff = cv2.imencode('jpg', image)
-                                out_file.write(buff)
-                                bot.send_attachment(recipient_id, att['type'], out_file)
+                                img_str = cv2.imencode('.jpg', image)[1].tostring()
+                                bot.send_attachment(recipient_id, att['type'], io.StringIO(img_str))
                 else:
                     pass
     return "Message Processed"
