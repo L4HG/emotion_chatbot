@@ -131,17 +131,15 @@ def receive_message():
         output = request.get_json()
         for event in output['entry']:
             messaging = event['messaging']
-            for x in messaging:
-                if x.get('message'):
-                    recipient_id = x['sender']['id']
-                    if x['message'].get('text'):
-                        message = x['message']['text']
+            for x_m in messaging:
+                if x_m.get('message'):
+                    recipient_id = x_m['sender']['id']
+                    if x_m['message'].get('text'):
+                        message = x_m['message']['text']
                         bot.send_text_message(recipient_id, message)
-                    if x['message'].get('attachments'):
-                        for att in x['message'].get('attachments'):
+                    if x_m['message'].get('attachments'):
+                        for att in x_m['message'].get('attachments'):
                             if att['type'] == "image" or True:
-                                temp = io.BytesIO()
-                                out_file = io.BytesIO()
                                 im = Image.open(urllib.request.urlopen(att['payload']['url']))
                                 image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
                                 # image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)
@@ -192,7 +190,7 @@ def receive_message():
                                     for (x, y) in shape:
                                         cv2.circle(image, (x, y), 1, (0, 0, 255), -1)
                                 img_str = cv2.imencode('.jpg', image)[1].tostring()
-                                bot.send_attachment(recipient_id, att['type'], io.StringIO(img_str))
+                                bot.send_image(recipient_id, io.StringIO(img_str))
                 else:
                     pass
     return "Message Processed"
