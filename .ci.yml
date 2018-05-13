@@ -1,0 +1,6 @@
+docker stop emotion_chatbot_container || true && \
+docker rm emotion_chatbot_container || true && \
+docker run \
+-v /var/opt/emotion_chatbot_db:/var/opt/emotion_chatbot_db \
+-d --rm -p 5001:5000 \
+--name emotion_chatbot_container l4hg/arboook_chatbot
