@@ -46,7 +46,7 @@ def receive_message():
                                 image_np = np.array(im)
                                 img_bytes = cv2.imencode('.jpg', image_np)[1]
                                 bot.send_text_message(recipient_id, len(img_bytes))
-                                bot.send_image(recipient_id, io.BytesIO(img_bytes))
+                                bot.send_image(recipient_id, img_bytes)
                             except Exception as e:
                                 bot.send_text_message(recipient_id, str(e))
                 else:
