@@ -9,6 +9,16 @@ VERIFY_TOKEN = 'VERIFY_TOKEN'
 from config import *
 bot = Bot(ACCESS_TOKEN)
 
+import io
+from PIL import Image # $ pip install pillow
+import face_recognition_models
+import dlib
+import numpy as np
+import cv2
+import urllib.request
+from collections import OrderedDict
+
+
 # We will receive messages that Facebook sends our bot at this endpoint
 @app.route("/", methods=['GET', 'POST'])
 def receive_message():
@@ -28,11 +38,16 @@ def receive_message():
                     recipient_id = x_m['sender']['id']
                     if x_m['message'].get('text'):
                         message = x_m['message']['text']
-                        bot.send_message(recipient_id, message)
+                        bot.send_text_message(recipient_id, message)
                     if x_m['message'].get('attachments'):
                         for att in x_m['message'].get('attachments'):
-                            bot.send_message(recipient_id, att['type'])
+                            bot.send_text_message(recipient_id, att['type'])
                             bot.send_image_url(recipient_id, att['payload']['url'])
+                            im = Image.open(urllib.request.urlopen(att['payload']['url']))
+                            image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+                            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                            img_str = cv2.imencode('.jpg', gray)[1].tostring()
+                            bot.send_image(recipient_id, io.StringIO(img_str))
                 else:
                     pass
     return "Message Processed"
@@ -44,22 +59,6 @@ def verify_fb_token(token_sent):
     if token_sent == VERIFY_TOKEN:
         return request.args.get("hub.challenge")
     return 'Invalid verification token'
-
-
-# chooses a random message to send to the user
-def get_message():
-    sample_responses = ["You are stunning!", "We're proud of you.", "Keep on being you!",
-                        "We're greatful to know you :)"]
-    # return selected item to the user
-    return random.choice(sample_responses)
-
-
-# uses PyMessenger to send response to user
-def send_message(recipient_id, response):
-    # sends user the text message provided via input response parameter
-    bot.send_text_message(recipient_id, response)
-    return "success"
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0")
