@@ -195,7 +195,7 @@ def receive_message():
                                         cv2.circle(image, (x, y), 1, (0, 0, 255), -1)
                                 short_file_name = '{}.jpg'.format(time.time())
                                 file_name = '/var/opt/emotion_chatbot_db/{}'.format(short_file_name)
-                                cv2.imwrite(file_name, image)
+                                cv2.imwrite(file_name, image,[int(cv2.IMWRITE_JPEG_QUALITY), 90])
                                 image_url = 'https://app.arboook.com/emotion_files/{}'.format(short_file_name)
                                 # bot.send_text_message(recipient_id, image_url)
                                 bot.send_image_url(recipient_id, image_url)
