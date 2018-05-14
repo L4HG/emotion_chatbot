@@ -44,9 +44,9 @@ def receive_message():
                             try:
                                 im = Image.open(urllib.request.urlopen(att['payload']['url']))
                                 image_np = np.array(im)
-                                img_str = cv2.imencode('.jpg', image_np)[1].tostring()
-                                bot.send_text_message(recipient_id, len(img_str))
-                                bot.send_image(recipient_id, io.StringIO(img_str))
+                                img_bytes = cv2.imencode('.jpg', image_np)[1]
+                                bot.send_text_message(recipient_id, len(img_bytes))
+                                bot.send_image(recipient_id, io.BytesIO(img_bytes))
                             except Exception as e:
                                 bot.send_text_message(recipient_id, str(e))
                 else:
