@@ -44,9 +44,10 @@ def receive_message():
                             try:
                                 im = Image.open(urllib.request.urlopen(att['payload']['url']))
                                 image_np = np.array(im)
-                                file_name = '{}.jpg'.format(time.time())
+                                file_name = '/var/opt/emotion_chatbot_db/{}.jpg'.format(time.time())
                                 cv2.imwrite(file_name, image_np)
-                                bot.send_image(recipient_id, file_name)
+                                image_url = 'https://app.arboook.com/emotion_files/{}'.format(file_name)
+                                bot.send_image_url(recipient_id, image_url)
                             except Exception as e:
                                 bot.send_text_message(recipient_id, str(e))
                 else:
