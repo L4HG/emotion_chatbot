@@ -41,13 +41,12 @@ def receive_message():
                         bot.send_text_message(recipient_id, message)
                     if x_m['message'].get('attachments'):
                         for att in x_m['message'].get('attachments'):
-                            bot.send_text_message(recipient_id, att['type'])
-                            bot.send_image_url(recipient_id, att['payload']['url'])
-                            im = Image.open(urllib.request.urlopen(att['payload']['url']))
-                            image = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-                            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                            img_str = cv2.imencode('.jpg', gray)[1].tostring()
-                            bot.send_image(recipient_id, io.StringIO(img_str))
+                            try:
+                                im = Image.open(urllib.request.urlopen(att['payload']['url']))
+                                img_str = cv2.imencode('.jpg', im)[1].tostring()
+                                bot.send_text_message(recipient_id, len(img_str))
+                            except Exception as e:
+                                bot.send_text_message(recipient_id, str(e))
                 else:
                     pass
     return "Message Processed"
