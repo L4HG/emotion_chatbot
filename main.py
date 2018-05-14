@@ -143,6 +143,7 @@ def receive_message():
                     if x_m['message'].get('attachments'):
                         for att in x_m['message'].get('attachments'):
                             try:
+                                bot.send_text_message(recipient_id, str(att['payload']['url']))
                                 im = Image.open(urllib.request.urlopen(att['payload']['url']))
                                 image_np = np.array(im)
                                 image = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
