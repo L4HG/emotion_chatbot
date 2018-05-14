@@ -17,45 +17,7 @@ import numpy as np
 import cv2
 import urllib.request
 from collections import OrderedDict
-import json
-from requests_toolbelt import MultipartEncoder
-import requests
-
-
-def send_image_bytes(self, recipient_id, image_bytes):
-    '''Send an image to the specified recipient.
-    Image must be PNG or JPEG or GIF (more might be supported).
-    https://developers.facebook.com/docs/messenger-platform/send-api-reference/image-attachment
-    Input:
-        recipient_id: recipient id to send to
-        image_path: path to image to be sent
-    Output:
-        Response from API as <dict>
-    '''
-    payload = {
-        'recipient': json.dumps(
-            {
-                'id': recipient_id
-            }
-        ),
-        'message': json.dumps(
-            {
-                'attachment': {
-                    'type': 'image',
-                    'payload': {}
-                }
-            }
-        ),
-        'filedata': ('image_file', image_bytes)
-    }
-    multipart_data = MultipartEncoder(payload)
-    multipart_header = {
-        'Content-Type': multipart_data.content_type
-    }
-    return requests.post(self.base_url, data=multipart_data, headers=multipart_header).json()
-
-
-bot.send_image_bytes = send_image_bytes
+import time
 
 # We will receive messages that Facebook sends our bot at this endpoint
 @app.route("/", methods=['GET', 'POST'])
@@ -82,9 +44,9 @@ def receive_message():
                             try:
                                 im = Image.open(urllib.request.urlopen(att['payload']['url']))
                                 image_np = np.array(im)
-                                img_bytes = cv2.imencode('.jpg', image_np)[1].tostring()
-                                bot.send_text_message(recipient_id, len(img_bytes))
-                                bot.send_image(recipient_id, img_bytes)
+                                file_name = '{}.jpg'.format(time.time())
+                                cv2.imwrite(file_name, image_np)
+                                bot.send_image(recipient_id, file_name)
                             except Exception as e:
                                 bot.send_text_message(recipient_id, str(e))
                 else:
