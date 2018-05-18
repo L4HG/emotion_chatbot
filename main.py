@@ -165,8 +165,6 @@ def receive_message():
 
                                     shape_n = shape_normalize(shape_r)
 
-                                    shape_nn = shape_normalize(shape)
-
                                     X_input = []
 
                                     X_input.append(np.hstack(shape_n))
@@ -177,7 +175,7 @@ def receive_message():
 
                                     proba_dict = {i: p for (i, p) in enumerate(proba_predict)}
 
-                                    # predict = model.predict(X_input)
+                                    predict = model.predict(X_input)
                                     num_predict = proba_predict.argmax(axis=1)[0]
                                     # print(proba_predict,predict, proba_predict.argmax(axis=1)[0])
                                     emotion = EMO_DICT[num_predict] + ' probab = {0:.2f}%'.format(
@@ -194,16 +192,14 @@ def receive_message():
 
                                     # loop over the (x, y)-coordinates for the facial landmarks
                                     # and draw them on the image
-                                    out_image = np.zeros(255*255, dtype='uint8').reshape(255,255)
-                                    out_image[:, :] = 255
-                                    for (x, y) in shape_nn:
-                                        cv2.circle(out_image, (int(x*255), int(y*255)), 1, (255, 255, 255), -1)
-                                    short_file_name = '{}.jpg'.format(time.time())
-                                    file_name = '/var/opt/emotion_chatbot_db/{}'.format(short_file_name)
-                                    cv2.imwrite(file_name, image,[int(cv2.IMWRITE_JPEG_QUALITY), 90])
-                                    image_url = 'https://app.arboook.com/emotion_files/{}'.format(short_file_name)
-                                    # bot.send_text_message(recipient_id, image_url)
-                                    bot.send_image_url(recipient_id, image_url)
+                                    for (x, y) in shape:
+                                        cv2.circle(image, (x, y), 1, (0, 0, 255), -1)
+                                short_file_name = '{}.jpg'.format(time.time())
+                                file_name = '/var/opt/emotion_chatbot_db/{}'.format(short_file_name)
+                                cv2.imwrite(file_name, image,[int(cv2.IMWRITE_JPEG_QUALITY), 90])
+                                image_url = 'https://app.arboook.com/emotion_files/{}'.format(short_file_name)
+                                # bot.send_text_message(recipient_id, image_url)
+                                bot.send_image_url(recipient_id, image_url)
                             except Exception as e:
                                 bot.send_text_message(recipient_id, str(e))
                 else:
