@@ -211,7 +211,7 @@ class Handlers:
                 image_zeros = np.zeros(271 * 271 * 3, dtype='uint8').reshape(271, 271, 3)
                 image_zeros[:, :] = (255, 255, 255)
                 for (x, y) in shape_nn:
-                    cv2.circle(image_zeros, (int(x * 255)+8, int(y * 255))+8, 1, (0, 0, 255), -1)
+                    cv2.circle(image_zeros, (int(x * 255)+8, int(y * 255)+8), 1, (0, 0, 255), -1)
                 short_file_name = '{}.jpg'.format(time.time())
                 file_name = file_path + '{}'.format(short_file_name)
                 cv2.imwrite(file_name, image_zeros, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
