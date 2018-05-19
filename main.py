@@ -1,14 +1,6 @@
 # Python libraries that we need to import for our bot
 import random
-from flask import Flask, request
-from pymessenger.bot import Bot
-
-app = Flask(__name__)
-ACCESS_TOKEN = 'ACCESS_TOKEN'
-VERIFY_TOKEN = 'VERIFY_TOKEN'
 from config import *
-bot = Bot(ACCESS_TOKEN)
-
 import io
 from PIL import Image # $ pip install pillow
 import face_recognition_models
@@ -18,6 +10,10 @@ import cv2
 import urllib.request
 from collections import OrderedDict
 import time
+
+import telegram
+from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler)
+
 
 
 face_detector = dlib.get_frontal_face_detector()
@@ -120,99 +116,141 @@ model = CatBoostClassifier(loss_function='MultiClass')
 model.load_model(fname='model_yan.cbm')
 
 
-# We will receive messages that Facebook sends our bot at this endpoint
-@app.route("/", methods=['GET', 'POST'])
-def receive_message():
-    if request.method == 'GET':
-        """Before allowing people to message your bot, Facebook has implemented a verify token
-        that confirms all requests that your bot receives came from Facebook."""
-        token_sent = request.args.get("hub.verify_token")
-        return verify_fb_token(token_sent)
-    # if the request was not get, it must be POST and we can just proceed with sending a message back to user
-    else:
-        # get whatever message a user sent the bot
-        output = request.get_json()
-        for event in output['entry']:
-            messaging = event['messaging']
-            for x_m in messaging:
-                if x_m.get('message'):
-                    recipient_id = x_m['sender']['id']
-                    if x_m['message'].get('text'):
-                        message = x_m['message']['text']
-                        bot.send_text_message(recipient_id, message)
-                    if x_m['message'].get('attachments'):
-                        for att in x_m['message'].get('attachments'):
-                            try:
-                                bot.send_text_message(recipient_id, str(att['payload']['url']))
-                                im = Image.open(urllib.request.urlopen(att['payload']['url']))
-                                image_np = np.array(im)
-                                image = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
-                                # image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)
-                                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+file_path = '/var/opt/emotion_chatbot_db/'
+# file_path = ''
 
-                                # detect faces in the grayscale image
-                                rects = face_detector(gray, 1)
+class Handlers:
+    @staticmethod
+    def start_command(bot, update, user_data):
+        user = update.message.from_user
+        chat_id = update.message.chat.id
+        if 'current_user' in user_data:
+            current_user = user_data['current_user']
+        else:
+            current_user = user.username
+            user_data['current_user'] = current_user
 
-                                # loop over the face detections
-                                for (i, rect) in enumerate(rects):
-                                    # determine the facial landmarks for the face region, then
-                                    # convert the facial landmark (x, y)-coordinates to a NumPy
-                                    # array
-                                    shape = pose_predictor_68_point(gray, rect)
-                                    shape = shape_to_np(shape)
+        message = 'Добро пожаловать! Вы можете оставить свой отзыв в виде фото, всем улыбкам будет подарок.'
+        bot.sendMessage(chat_id, message)
+        return
 
-                                    shape_r = shape_rotate(shape)
+    @staticmethod
+    def photo_handler(bot, update, user_data):
+        user = update.message.from_user
+        chat_id = update.message.chat.id
+        if 'current_user' in user_data:
+            current_user = user_data['current_user']
+        else:
+            current_user = user.username
+            user_data['current_user'] = current_user
 
-                                    shape_n = shape_normalize(shape_r)
+        photo_file = bot.getFile(update.message.photo[-1].file_id)
+        print(photo_file)
+        photo_file_name = file_path + '{}.jpg'.format(str(photo_file.file_id).replace('-', ''))
+        print(photo_file_name)
+        photo_file.download(photo_file_name)
 
-                                    X_input = []
+        try:
+            im = Image.open(photo_file_name)
+            print(im)
+            image_np = np.array(im)
+            image = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+            # image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-                                    X_input.append(np.hstack(shape_n))
+            # detect faces in the grayscale image
+            rects = face_detector(gray, 1)
 
-                                    X_input = np.array(X_input)
-                                    X_input.shape
-                                    proba_predict = model.predict_proba(X_input)
+            # loop over the face detections
+            for (i, rect) in enumerate(rects):
+                # determine the facial landmarks for the face region, then
+                # convert the facial landmark (x, y)-coordinates to a NumPy
+                # array
+                shape = pose_predictor_68_point(gray, rect)
+                shape = shape_to_np(shape)
 
-                                    proba_dict = {i: p for (i, p) in enumerate(proba_predict)}
+                shape_r = shape_rotate(shape)
 
-                                    predict = model.predict(X_input)
-                                    num_predict = proba_predict.argmax(axis=1)[0]
-                                    # print(proba_predict,predict, proba_predict.argmax(axis=1)[0])
-                                    emotion = EMO_DICT[num_predict] + ' probab = {0:.2f}%'.format(
-                                        proba_predict[0][num_predict])
+                shape_n = shape_normalize(shape_r)
+                shape_nn = shape_normalize(shape)
 
-                                    # convert dlib's rectangle to a OpenCV-style bounding box
-                                    # [i.e., (x, y, w, h)], then draw the face bounding box
-                                    (x, y, w, h) = rect_to_bb(rect)
-                                    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                X_input = []
 
-                                    # show the face number
-                                    cv2.putText(image, "Emotion {}".format(emotion), (x - 10, y - 10),
-                                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                X_input.append(np.hstack(shape_n))
 
-                                    # loop over the (x, y)-coordinates for the facial landmarks
-                                    # and draw them on the image
-                                    for (x, y) in shape:
-                                        cv2.circle(image, (x, y), 1, (0, 0, 255), -1)
-                                short_file_name = '{}.jpg'.format(time.time())
-                                file_name = '/var/opt/emotion_chatbot_db/{}'.format(short_file_name)
-                                cv2.imwrite(file_name, image,[int(cv2.IMWRITE_JPEG_QUALITY), 90])
-                                image_url = 'https://app.arboook.com/emotion_files/{}'.format(short_file_name)
-                                # bot.send_text_message(recipient_id, image_url)
-                                bot.send_image_url(recipient_id, image_url)
-                            except Exception as e:
-                                bot.send_text_message(recipient_id, str(e))
-                else:
-                    pass
-    return "Message Processed"
+                X_input = np.array(X_input)
+                X_input.shape
+                proba_predict = model.predict_proba(X_input)[0]
+
+                proba_dict = {i: p for (i, p) in enumerate(proba_predict)}
+
+                predict = model.predict(X_input)
+                num_predict = proba_predict.argmax()
+                # print(proba_predict,predict, proba_predict.argmax(axis=1)[0])
+                emotion = EMO_DICT[num_predict] + ' probab = {0:.2f}%'.format(
+                    proba_predict[num_predict])
+
+                # convert dlib's rectangle to a OpenCV-style bounding box
+                # [i.e., (x, y, w, h)], then draw the face bounding box
+                (x, y, w, h) = rect_to_bb(rect)
+                cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+                # show the face number
+                cv2.putText(image, "Emotion {}".format(emotion), (x - 10, y - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+                # loop over the (x, y)-coordinates for the facial landmarks
+                # and draw them on the image
+                image_zeros = np.zeros(255*255*3, dtype='uint8').reshape(255,255,3)
+                image_zeros[:, :] = (255,255,255)
+                for (x, y) in shape_nn:
+                    cv2.circle(image_zeros, (int(x*255), int(y*255)), 1, (0, 0, 255), -1)
+                short_file_name = '{}.jpg'.format(time.time())
+                file_name = file_path+'{}'.format(short_file_name)
+                cv2.imwrite(file_name, image_zeros, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
+                # bot.send_text_message(recipient_id, image_url)
+                bot.send_photo(chat_id=chat_id, photo=open(file_name, 'rb'))
+                emotions = ''
+                for emotion_i in proba_dict.keys():
+                    emotions = emotions + '{}: {} \r\n'.format(EMO_DICT[emotion_i], proba_dict[emotion_i])
+                message = 'Ваши эмоции:\r\n{}'.format(emotions)
+                bot.sendMessage(chat_id, message)
+
+                if proba_dict[5] > 0.1 and user_data.get('code_sent', 0) != 1:
+                    happy_message = ('Спасибо за улыбку!\r\n' +
+                                     'Специально для вас мы подготовили скидочный код ' +
+                                     'на подписку курса о машинном обучении в бизнесе \r\n' +
+                                     'Код: BinaryC551\r\n' +
+                                     'Для получения информации о данном курсе, пришлите данный код на Email: course@arboook.com'
+                                     )
+                    bot.sendMessage(chat_id, happy_message)
+                    user_data['code_sent'] = 1
+                elif user_data.get('code_sent', 0) == 1:
+                    message = 'Так красиво улыбаетесь!'
+                    bot.sendMessage(chat_id, message)
+                elif proba_dict[5] < 0.1:
+                    message = 'Не грустите, машинное обучение развеселит вас!'
+                    bot.sendMessage(chat_id, message)
+        except Exception as e:
+            bot.sendMessage(chat_id, str(e))
 
 
-def verify_fb_token(token_sent):
-    # take token sent by facebook and verify it matches the verify token you sent
-    # if they match, allow the request, else return an error
-    if token_sent == VERIFY_TOKEN:
-        return request.args.get("hub.challenge")
-    return 'Invalid verification token'
+        return
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0")
+
+
+def main():
+
+    updater = Updater(token=bot_token) # Токен API к Telegram
+    dispatcher = updater.dispatcher
+
+    dispatcher.add_handler(CommandHandler('start', Handlers.start_command, pass_user_data=True))
+    dispatcher.add_handler(MessageHandler(Filters.photo, Handlers.photo_handler, pass_user_data=True))
+
+    updater.start_polling()
+    updater.idle()
+    #test
+
+
+if __name__ == '__main__':
+    main()
