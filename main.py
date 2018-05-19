@@ -234,7 +234,7 @@ class Handlers:
                     bot.sendMessage(chat_id, happy_message)
                     bot.sendMessage(chat_id='-100' + '1324810869', text=happy_message)
                     user_data['code_sent'] = 1
-                elif user_data.get('code_sent', 0) == 1:
+                elif user_data.get('code_sent', 0) == 1 and proba_dict[5] >= 0.3:
                     message = 'Так красиво улыбаетесь!'
                     bot.sendMessage(chat_id, message)
                 elif proba_dict[5] < 0.3:
