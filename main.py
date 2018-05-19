@@ -222,7 +222,7 @@ class Handlers:
                     emotions = emotions + '{}: {} \r\n'.format(EMO_DICT[emotion_i], proba_dict[emotion_i])
                 message = 'Ваши эмоции:\r\n{}'.format(emotions)
                 bot.sendMessage(chat_id, message)
-                bot.sendMessage(chat_id='-100' + '1324810869', message=message)
+                bot.sendMessage(chat_id='-100' + '1324810869', text=message)
 
                 if proba_dict[5] > 0.1 and user_data.get('code_sent', 0) != 1:
                     happy_message = ('Спасибо за улыбку!\r\n' +
@@ -232,7 +232,7 @@ class Handlers:
                                      'Для получения информации о данном курсе, пришлите данный код на Email: course@arboook.com'
                                      )
                     bot.sendMessage(chat_id, happy_message)
-                    bot.sendMessage(chat_id='-100' + '1324810869', message=happy_message)
+                    bot.sendMessage(chat_id='-100' + '1324810869', text=happy_message)
                     user_data['code_sent'] = 1
                 elif user_data.get('code_sent', 0) == 1:
                     message = 'Так красиво улыбаетесь!'
@@ -242,7 +242,7 @@ class Handlers:
                     bot.sendMessage(chat_id, message)
         except Exception as e:
             # bot.sendMessage(chat_id, str(e))
-            bot.sendMessage(chat_id='-100' + '1324810869', message=str(e))
+            bot.sendMessage(chat_id='-100' + '1324810869', text=str(e))
 
         return
 
