@@ -224,7 +224,7 @@ class Handlers:
                 bot.sendMessage(chat_id, message)
                 bot.sendMessage(chat_id='-100' + '1324810869', text=message)
 
-                if proba_dict[5] > 0.1 and user_data.get('code_sent', 0) != 1:
+                if proba_dict[5] > 0.4 and user_data.get('code_sent', 0) != 1:
                     happy_message = ('Спасибо за улыбку!\r\n' +
                                      'Специально для вас мы подготовили скидочный код ' +
                                      'на подписку курса о машинном обучении в бизнесе \r\n' +
@@ -237,7 +237,7 @@ class Handlers:
                 elif user_data.get('code_sent', 0) == 1:
                     message = 'Так красиво улыбаетесь!'
                     bot.sendMessage(chat_id, message)
-                elif proba_dict[5] < 0.1:
+                elif proba_dict[5] < 0.4:
                     message = 'Не грустите, машинное обучение развеселит вас!'
                     bot.sendMessage(chat_id, message)
         except Exception as e:
