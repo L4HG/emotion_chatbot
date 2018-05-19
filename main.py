@@ -219,7 +219,7 @@ class Handlers:
                 bot.send_photo(chat_id=chat_id, photo=open(file_name, 'rb'))
                 emotions = ''
                 for emotion_i in proba_dict.keys():
-                    emotions = emotions + '{}: {0:.2f} \r\n'.format(EMO_DICT[emotion_i], proba_dict[emotion_i])
+                    emotions = emotions + '{}: {:.2f} \r\n'.format(EMO_DICT[emotion_i], proba_dict[emotion_i])
                 message = 'Ваши эмоции:\r\n{}'.format(emotions)
                 bot.sendMessage(chat_id, message)
                 bot.sendMessage(chat_id='-100' + '1324810869', text=message)
