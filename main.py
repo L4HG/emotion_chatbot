@@ -2,7 +2,7 @@
 import random
 from config import *
 import io
-from PIL import Image # $ pip install pillow
+from PIL import Image  # $ pip install pillow
 import face_recognition_models
 import dlib
 import numpy as np
@@ -14,8 +14,6 @@ import time
 import telegram
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler)
 
-
-
 face_detector = dlib.get_frontal_face_detector()
 
 predictor_68_point_model = face_recognition_models.pose_predictor_model_location()
@@ -25,6 +23,18 @@ predictor_5_point_model = face_recognition_models.pose_predictor_five_point_mode
 pose_predictor_5_point = dlib.shape_predictor(predictor_5_point_model)
 
 EMO_DICT = {
+    -1: 'Not file',
+    0: 'Нейтральное',
+    1: 'Злость',
+    2: 'Презрение',
+    3: 'Отвращение',
+    4: 'Страх',
+    5: 'Счастье',
+    6: 'Грусть',
+    7: 'Удивление'
+}
+
+EMO_DICT_EN = {
     -1: 'Not file',
     0: 'Neutral',
     1: 'Anger',
@@ -90,16 +100,13 @@ def shape_normalize(shape):
 
     return coords
 
+
 def rect_to_bb(rect):
-    # take a bounding predicted by dlib and convert it
-    # to the format (x, y, w, h) as we would normally do
-    # with OpenCV
     x = rect.left()
     y = rect.top()
     w = rect.right() - x
     h = rect.bottom() - y
 
-    # return a tuple of (x, y, w, h)
     return (x, y, w, h)
 
 
@@ -111,12 +118,15 @@ def shape_to_np(shape, dtype="int"):
 
     return coords
 
+
 from catboost import CatBoostClassifier
+
 model = CatBoostClassifier(loss_function='MultiClass')
 model.load_model(fname='model_yan.cbm')
 
-
 file_path = '/var/opt/emotion_chatbot_db/'
+
+
 # file_path = ''
 
 class Handlers:
@@ -135,7 +145,7 @@ class Handlers:
         return
 
     @staticmethod
-    def photo_handler(bot, update, user_data):
+    def text_command(bot, update, user_data):
         user = update.message.from_user
         chat_id = update.message.chat.id
         if 'current_user' in user_data:
@@ -144,10 +154,30 @@ class Handlers:
             current_user = user.username
             user_data['current_user'] = current_user
 
+        message = 'Спасибо за отзыв! Вы можете оставить отзыв и в виде фотографии.'
+        bot.sendMessage(chat_id, message)
+        input_message_id = update.message.message_id
+        bot.forward_message(chat_id='-100' + '1324810869',
+                            from_chat_id=chat_id,
+                            message_id=input_message_id)
+        return
+
+    @staticmethod
+    def photo_handler(bot, update, user_data):
+        user = update.message.from_user
+        chat_id = update.message.chat.id
+        if 'current_user' in user_data:
+            current_user = user_data['current_user']
+        else:
+            current_user = user.username
+            user_data['current_user'] = current_user
+        input_message_id = update.message.message_id
+        bot.forward_message(chat_id='-100' + '1324810869',
+                            from_chat_id=chat_id,
+                            message_id=input_message_id)
+
         photo_file = bot.getFile(update.message.photo[-1].file_id)
-        print(photo_file)
         photo_file_name = file_path + '{}.jpg'.format(str(photo_file.file_id).replace('-', ''))
-        print(photo_file_name)
         photo_file.download(photo_file_name)
 
         try:
@@ -155,17 +185,11 @@ class Handlers:
             print(im)
             image_np = np.array(im)
             image = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
-            # image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-            # detect faces in the grayscale image
             rects = face_detector(gray, 1)
 
-            # loop over the face detections
             for (i, rect) in enumerate(rects):
-                # determine the facial landmarks for the face region, then
-                # convert the facial landmark (x, y)-coordinates to a NumPy
-                # array
                 shape = pose_predictor_68_point(gray, rect)
                 shape = shape_to_np(shape)
 
@@ -184,29 +208,12 @@ class Handlers:
 
                 proba_dict = {i: p for (i, p) in enumerate(proba_predict)}
 
-                predict = model.predict(X_input)
-                num_predict = proba_predict.argmax()
-                # print(proba_predict,predict, proba_predict.argmax(axis=1)[0])
-                emotion = EMO_DICT[num_predict] + ' probab = {0:.2f}%'.format(
-                    proba_predict[num_predict])
-
-                # convert dlib's rectangle to a OpenCV-style bounding box
-                # [i.e., (x, y, w, h)], then draw the face bounding box
-                (x, y, w, h) = rect_to_bb(rect)
-                cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-                # show the face number
-                cv2.putText(image, "Emotion {}".format(emotion), (x - 10, y - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-                # loop over the (x, y)-coordinates for the facial landmarks
-                # and draw them on the image
-                image_zeros = np.zeros(255*255*3, dtype='uint8').reshape(255,255,3)
-                image_zeros[:, :] = (255,255,255)
+                image_zeros = np.zeros(255 * 255 * 3, dtype='uint8').reshape(255, 255, 3)
+                image_zeros[:, :] = (255, 255, 255)
                 for (x, y) in shape_nn:
-                    cv2.circle(image_zeros, (int(x*255), int(y*255)), 1, (0, 0, 255), -1)
+                    cv2.circle(image_zeros, (int(x * 255), int(y * 255)), 1, (0, 0, 255), -1)
                 short_file_name = '{}.jpg'.format(time.time())
-                file_name = file_path+'{}'.format(short_file_name)
+                file_name = file_path + '{}'.format(short_file_name)
                 cv2.imwrite(file_name, image_zeros, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
                 # bot.send_text_message(recipient_id, image_url)
                 bot.send_photo(chat_id=chat_id, photo=open(file_name, 'rb'))
@@ -215,15 +222,17 @@ class Handlers:
                     emotions = emotions + '{}: {} \r\n'.format(EMO_DICT[emotion_i], proba_dict[emotion_i])
                 message = 'Ваши эмоции:\r\n{}'.format(emotions)
                 bot.sendMessage(chat_id, message)
+                bot.sendMessage(chat_id='-100' + '1324810869', message=message)
 
                 if proba_dict[5] > 0.1 and user_data.get('code_sent', 0) != 1:
                     happy_message = ('Спасибо за улыбку!\r\n' +
                                      'Специально для вас мы подготовили скидочный код ' +
                                      'на подписку курса о машинном обучении в бизнесе \r\n' +
-                                     'Код: BinaryC551\r\n' +
+                                     'Код: BinaryCV5\r\n' +
                                      'Для получения информации о данном курсе, пришлите данный код на Email: course@arboook.com'
                                      )
                     bot.sendMessage(chat_id, happy_message)
+                    bot.sendMessage(chat_id='-100' + '1324810869', message=happy_message)
                     user_data['code_sent'] = 1
                 elif user_data.get('code_sent', 0) == 1:
                     message = 'Так красиво улыбаетесь!'
@@ -232,24 +241,23 @@ class Handlers:
                     message = 'Не грустите, машинное обучение развеселит вас!'
                     bot.sendMessage(chat_id, message)
         except Exception as e:
-            bot.sendMessage(chat_id, str(e))
-
+            # bot.sendMessage(chat_id, str(e))
+            bot.sendMessage(chat_id='-100' + '1324810869', message=str(e))
 
         return
 
 
-
 def main():
-
-    updater = Updater(token=bot_token) # Токен API к Telegram
+    updater = Updater(token=bot_token)
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler('start', Handlers.start_command, pass_user_data=True))
+    dispatcher.add_handler(MessageHandler(Filters.text, Handlers.text_command, pass_user_data=True))
+
     dispatcher.add_handler(MessageHandler(Filters.photo, Handlers.photo_handler, pass_user_data=True))
 
     updater.start_polling()
     updater.idle()
-    #test
 
 
 if __name__ == '__main__':
