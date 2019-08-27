@@ -23,5 +23,5 @@ requests-toolbelt==0.8.0
 six==1.11.0
 SQLAlchemy
 urllib3
-Werkzeug==0.14.1
+Werkzeug
 catboost
